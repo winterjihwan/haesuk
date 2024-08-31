@@ -1,16 +1,31 @@
 #[macro_export]
 macro_rules! inst {
-    ($i_type:expr, $operand:expr) => {
-        Inst {
-            i_type: $i_type,
-            operand: Some($operand),
-        }
+    (InstPush, $operand:expr) => {
+        Inst::InstPush($operand)
     };
-    ($i_type:expr) => {
-        Inst {
-            i_type: $i_type,
-            operand: None,
-        }
+    (InstAdd) => {
+        Inst::InstAdd
+    };
+    (InstSub) => {
+        Inst::InstSub
+    };
+    (InstMul) => {
+        Inst::InstMul
+    };
+    (InstDiv) => {
+        Inst::InstDiv
+    };
+    (InstHalt) => {
+        Inst::InstHalt
+    };
+    (InstLoop, $operand:expr) => {
+        Inst::InstLoop($operand)
+    };
+    (InstEq, $operand:expr) => {
+        Inst::InstEq($operand)
+    };
+    (InstDup, $operand:expr) => {
+        Inst::InstDup($operand)
     };
 }
 

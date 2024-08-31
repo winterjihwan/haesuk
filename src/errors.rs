@@ -1,17 +1,17 @@
 use thiserror::Error;
 
-use crate::InstType;
+use crate::Inst;
 
 #[derive(Error, Debug)]
 pub enum VMError {
     #[error("Stack overflow while operating on {inst:?}")]
-    StackOverflow { inst: InstType },
+    StackOverflow { inst: Inst },
 
     #[error("Stack underflow while operating on {inst:?}")]
-    StackUnderflow { inst: InstType },
+    StackUnderflow { inst: Inst },
 
     #[error("Operand non exists while operating on {inst:?}")]
-    OperandNonExists { inst: InstType },
+    OperandNonExists { inst: Inst },
 
     #[error("Division by zero")]
     DivisionByZero,
