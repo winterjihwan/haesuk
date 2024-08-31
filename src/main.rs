@@ -36,11 +36,14 @@ fn save_program_to_file(program: &Program, path: &str) -> io::Result<()> {
 fn main() -> io::Result<()> {
     let mut vm = VM::new();
 
-    let fib_path = "fib.ha";
-    vm.load_program_from_file(fib_path).unwrap();
-
     //vm.load_program_from_memory(program)
     //    .map_err(io::Error::from)?;
+
+    //let fib_path = "fib.ha";
+    //vm.load_program_from_file(fib_path)?;
+
+    let fib_hasm_path = "fib.hasm";
+    vm.load_hasm_from_file(fib_hasm_path)?;
 
     vm.run().map_err(io::Error::from)?;
 

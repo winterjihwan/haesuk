@@ -31,6 +31,26 @@ impl VM {
         }
     }
 
+    pub fn load_hasm_from_file(&mut self, path: &str) -> Result<(), VMError> {
+        let mut file = File::open(path).map_err(|err| VMError::IoFail {
+            err: err.to_string(),
+        })?;
+
+        let mut buffer = String::new();
+
+        file.read_to_string(&mut buffer)
+            .map_err(|err| VMError::IoFail {
+                err: err.to_string(),
+            })?;
+
+        let program = Program::from_hasm(&buffer)?;
+
+        self.program_size = program.insts.len();
+        self.program = program;
+
+        Ok(())
+    }
+
     pub fn load_program_from_memory(&mut self, program: Program) -> Result<(), VMError> {
         self.program_size = program.insts.len();
         self.program = program;

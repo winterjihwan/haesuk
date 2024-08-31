@@ -30,6 +30,9 @@ pub enum VMError {
     #[error("Parse Le bytes fail")]
     ParseLeBytesFail,
 
+    #[error("Invalid asm inst, inst: {inst}")]
+    InvalidAsmInst { inst: String },
+
     #[error("I/O fail, err: {err}")]
     IoFail { err: String },
 }
