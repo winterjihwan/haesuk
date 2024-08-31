@@ -1,6 +1,8 @@
+use std::io;
+
 use thiserror::Error;
 
-use crate::Inst;
+use crate::inst::Inst;
 
 #[derive(Error, Debug)]
 pub enum VMError {
@@ -21,4 +23,19 @@ pub enum VMError {
 
     #[error("Invalid operand")]
     InvalidOperand,
+
+    #[error("Deserialize opcode failed")]
+    DeserializeOpcodeFail,
+
+    #[error("Parse Le bytes fail")]
+    ParseLeBytesFail,
+
+    #[error("I/O fail, err: {err}")]
+    IoFail { err: String },
+}
+
+impl From<VMError> for io::Error {
+    fn from(error: VMError) -> Self {
+        io::Error::new(io::ErrorKind::Other, format!("{:#?}", error))
+    }
 }

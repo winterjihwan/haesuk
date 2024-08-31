@@ -1,5 +1,7 @@
 mod errors;
+mod inst;
 mod macros;
+mod program;
 mod vm;
 
 use std::{
@@ -8,38 +10,39 @@ use std::{
 };
 
 pub use errors::*;
+use program::Program;
 pub use vm::*;
+
+fn save_program_to_file(program: &Program, path: &str) -> io::Result<()> {
+    //let program = Program {
+    //    insts: vec![
+    //        Inst::InstPush(0),
+    //        Inst::InstPush(1),
+    //        Inst::InstDup(1),
+    //        Inst::InstDup(1),
+    //        Inst::InstAdd,
+    //        Inst::InstLoop(2),
+    //    ],
+    //};
+
+    //save_program_to_file(&program, "fib.ha")?;
+
+    let mut file = File::create(path)?;
+    file.write_all(&program.to_bytes())?;
+
+    Ok(())
+}
 
 fn main() -> io::Result<()> {
     let mut vm = VM::new();
 
-    let program = Program {
-        insts: vec![
-            Inst::InstPush(0),
-            Inst::InstPush(1),
-            Inst::InstDup(1),
-            Inst::InstDup(1),
-            Inst::InstAdd,
-            Inst::InstLoop(2),
-        ],
-    };
+    let fib_path = "fib.ha";
+    vm.load_program_from_file(fib_path).unwrap();
 
-    let mut file = File::create("fib.ha")?;
-    file.write_all(&program.to_bytes())?;
+    //vm.load_program_from_memory(program)
+    //    .map_err(io::Error::from)?;
 
-    match vm.load_program(program) {
-        Ok(_) => (),
-        Err(err) => {
-            println!("ERR:{}", err)
-        }
-    };
-
-    match vm.run() {
-        Ok(_) => (),
-        Err(err) => {
-            println!("ERR:{}", err)
-        }
-    };
+    vm.run().map_err(io::Error::from)?;
 
     vm.dump();
 

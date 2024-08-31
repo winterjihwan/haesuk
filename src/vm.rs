@@ -1,8 +1,12 @@
-use crate::VMError;
+use std::{fs::File, io::Read};
+
+use crate::{inst::Inst, program::Program, VMError};
 
 const STACK_SIZE_LIMIT: usize = 1024;
 
-type Word = usize;
+pub type Word = usize;
+
+#[derive(Debug)]
 pub struct VM {
     stack: [Word; STACK_SIZE_LIMIT],
     stack_size: usize,
@@ -12,79 +16,6 @@ pub struct VM {
     ip: usize,
 
     halt: bool,
-}
-
-#[derive(Debug, Clone)]
-pub enum Inst {
-    InstPush(Word),
-    InstAdd,
-    InstSub,
-    InstMul,
-    InstDiv,
-    InstHalt,
-    InstLoop(Word),
-    InstEq(Word),
-    InstDup(Word),
-}
-
-#[derive(Default)]
-pub struct Program {
-    pub insts: Vec<Inst>,
-}
-
-impl Inst {
-    pub fn opcode(&self) -> u8 {
-        match self {
-            Inst::InstPush(_) => 0x01,
-            Inst::InstAdd => 0x02,
-            Inst::InstSub => 0x03,
-            Inst::InstMul => 0x04,
-            Inst::InstDiv => 0x05,
-            Inst::InstHalt => 0x06,
-            Inst::InstLoop(_) => 0x07,
-            Inst::InstEq(_) => 0x08,
-            Inst::InstDup(_) => 0x09,
-        }
-    }
-
-    pub fn serialize<'a>(&self, bytes: &'a mut [u8; 16]) -> &'a [u8; 16] {
-        bytes[0..16].copy_from_slice(&(self.opcode() as u128).to_le_bytes());
-
-        bytes
-    }
-
-    pub fn serialize_operand<'a>(&self, bytes: &'a mut [u8; 16], operand: &Word) -> &'a [u8; 16] {
-        bytes[0..8].copy_from_slice(&(self.opcode() as u64).to_le_bytes());
-        bytes[8..16].copy_from_slice(&operand.to_le_bytes());
-
-        bytes
-    }
-
-    pub fn to_bytes(&self) -> [u8; 16] {
-        let mut bytes = [0u8; 16];
-        match self {
-            Inst::InstPush(operand) => *self.serialize_operand(&mut bytes, operand),
-            Inst::InstAdd => *self.serialize(&mut bytes),
-            Inst::InstSub => *self.serialize(&mut bytes),
-            Inst::InstMul => *self.serialize(&mut bytes),
-            Inst::InstDiv => *self.serialize(&mut bytes),
-            Inst::InstHalt => *self.serialize(&mut bytes),
-            Inst::InstLoop(operand) => *self.serialize_operand(&mut bytes, operand),
-            Inst::InstEq(operand) => *self.serialize_operand(&mut bytes, operand),
-            Inst::InstDup(operand) => *self.serialize_operand(&mut bytes, operand),
-        }
-    }
-}
-
-impl Program {
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::new();
-        self.insts
-            .iter()
-            .for_each(|inst| bytes.extend(inst.to_bytes()));
-
-        bytes
-    }
 }
 
 impl VM {
@@ -100,7 +31,27 @@ impl VM {
         }
     }
 
-    pub fn load_program(&mut self, program: Program) -> Result<(), VMError> {
+    pub fn load_program_from_memory(&mut self, program: Program) -> Result<(), VMError> {
+        self.program_size = program.insts.len();
+        self.program = program;
+
+        Ok(())
+    }
+
+    pub fn load_program_from_file(&mut self, path: &str) -> Result<(), VMError> {
+        let mut file = File::open(path).map_err(|err| VMError::IoFail {
+            err: err.to_string(),
+        })?;
+
+        let mut buffer = Vec::new();
+
+        file.read_to_end(&mut buffer)
+            .map_err(|err| VMError::IoFail {
+                err: err.to_string(),
+            })?;
+
+        let program = Program::from_bytes(&buffer)?;
+
         self.program_size = program.insts.len();
         self.program = program;
 
