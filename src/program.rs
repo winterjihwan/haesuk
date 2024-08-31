@@ -30,7 +30,7 @@ impl Program {
         Ok(Self { insts })
     }
 
-    pub fn from_hasm(asm: &String) -> Result<Program, VMError> {
+    pub fn from_hasm(asm: &String) -> Result<Self, VMError> {
         let asm_insts: Vec<&str> = asm
             .split("\n")
             .filter(|inst| !inst.trim().is_empty())
@@ -47,7 +47,7 @@ impl Program {
                     "mul" => Ok(Inst::InstMul),
                     "div" => Ok(Inst::InstDiv),
                     "halt" => Ok(Inst::InstHalt),
-                    "loop" => Ok(Inst::InstLoop(elems[1].parse::<usize>().unwrap())),
+                    "jmp" => Ok(Inst::InstJmp(elems[1].parse::<usize>().unwrap())),
                     "eq" => Ok(Inst::InstEq(elems[1].parse::<usize>().unwrap())),
                     "dup" => Ok(Inst::InstDup(elems[1].parse::<usize>().unwrap())),
                     _ => Err(VMError::InvalidAsmInst {
@@ -58,5 +58,22 @@ impl Program {
             .collect::<Result<Vec<Inst>, VMError>>()?;
 
         Ok(Self { insts })
+    }
+
+    pub fn to_hasm(&self) -> Vec<String> {
+        self.insts
+            .iter()
+            .map(|inst| match inst {
+                Inst::InstPush(operand) => format!("push {}", operand),
+                Inst::InstAdd => "add".to_string(),
+                Inst::InstSub => "sub".to_string(),
+                Inst::InstMul => "mul".to_string(),
+                Inst::InstDiv => "div".to_string(),
+                Inst::InstHalt => "halt".to_string(),
+                Inst::InstJmp(operand) => format!("jmp {}", operand),
+                Inst::InstEq(operand) => format!("eq {}", operand),
+                Inst::InstDup(operand) => format!("dup {}", operand),
+            })
+            .collect::<Vec<String>>()
     }
 }

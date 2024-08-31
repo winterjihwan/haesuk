@@ -8,7 +8,7 @@ pub enum Inst {
     InstMul,
     InstDiv,
     InstHalt,
-    InstLoop(Word),
+    InstJmp(Word),
     InstEq(Word),
     InstDup(Word),
 }
@@ -22,7 +22,7 @@ impl Inst {
             Inst::InstMul => 0x04,
             Inst::InstDiv => 0x05,
             Inst::InstHalt => 0x06,
-            Inst::InstLoop(_) => 0x07,
+            Inst::InstJmp(_) => 0x07,
             Inst::InstEq(_) => 0x08,
             Inst::InstDup(_) => 0x09,
         }
@@ -36,7 +36,7 @@ impl Inst {
             0x04 => Some(Inst::InstMul),
             0x05 => Some(Inst::InstDiv),
             0x06 => Some(Inst::InstHalt),
-            0x07 => Some(Inst::InstLoop(0)),
+            0x07 => Some(Inst::InstJmp(0)),
             0x08 => Some(Inst::InstEq(0)),
             0x09 => Some(Inst::InstDup(0)),
             _ => None,
@@ -65,7 +65,7 @@ impl Inst {
             Inst::InstMul => *self.serialize(&mut bytes),
             Inst::InstDiv => *self.serialize(&mut bytes),
             Inst::InstHalt => *self.serialize(&mut bytes),
-            Inst::InstLoop(operand) => *self.serialize_operand(&mut bytes, operand),
+            Inst::InstJmp(operand) => *self.serialize_operand(&mut bytes, operand),
             Inst::InstEq(operand) => *self.serialize_operand(&mut bytes, operand),
             Inst::InstDup(operand) => *self.serialize_operand(&mut bytes, operand),
         }
@@ -74,7 +74,7 @@ impl Inst {
     fn with_operand(self, operand: usize) -> Self {
         match self {
             Inst::InstPush(_) => Inst::InstPush(operand),
-            Inst::InstLoop(_) => Inst::InstLoop(operand),
+            Inst::InstJmp(_) => Inst::InstJmp(operand),
             Inst::InstEq(_) => Inst::InstEq(operand),
             Inst::InstDup(_) => Inst::InstDup(operand),
             _ => self,

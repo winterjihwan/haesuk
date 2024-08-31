@@ -140,7 +140,7 @@ impl VM {
                 Inst::InstHalt => {
                     self.halt = true;
                 }
-                Inst::InstLoop(operand) => {
+                Inst::InstJmp(operand) => {
                     self.ip = *operand;
                 }
                 Inst::InstEq(operand) => {

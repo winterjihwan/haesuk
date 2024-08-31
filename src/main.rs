@@ -6,7 +6,7 @@ mod program;
 mod vm;
 
 pub use errors::*;
-use hasm::hasm_to_ha;
+use hasm::{ha_to_hasm, hasm_to_ha};
 use std::{
     env,
     io::{self},
@@ -21,8 +21,9 @@ pub use vm::*;
 #[derive(EnumString, EnumIter, AsRefStr, Debug)]
 #[allow(non_camel_case_types)]
 pub enum Cmd {
-    save,
-    execute,
+    assembly,
+    emulate,
+    disassembly,
 }
 
 #[derive(EnumString, EnumIter, AsRefStr, Debug)]
@@ -38,7 +39,7 @@ fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         println!(
-            "ERROR: input cmd, --* with the following {:#?}",
+            "Usage: input cmd, --* with the following {:#?}",
             avaiable_cmds
         );
         exit(-1)
@@ -53,9 +54,9 @@ fn main() -> io::Result<()> {
     });
 
     match cmd {
-        Cmd::save => {
+        Cmd::assembly => {
             if args.len() < 3 {
-                println!("ERROR: input path args");
+                println!("Usage: input path args");
                 println!("\t*.hasm");
                 exit(-1)
             }
@@ -66,12 +67,25 @@ fn main() -> io::Result<()> {
 
             hasm_to_ha(hasm_path)?;
         }
-        Cmd::execute => {
+        Cmd::disassembly => {
+            if args.len() < 3 {
+                println!("Usage: input path args");
+                println!("\t*.ha");
+                exit(-1)
+            }
+
+            let hasm_path = &args[2];
+            assert!(hasm_path.ends_with(".ha"));
+            println!("Ha path: {}", hasm_path);
+
+            ha_to_hasm(hasm_path)?;
+        }
+        Cmd::emulate => {
             let available_exec_types: Vec<ExecType> = ExecType::iter().map(|ext| ext).collect();
 
             if args.len() < 3 {
                 println!(
-                    "ERROR: input execution type, --* with the following {:#?}",
+                    "Usage: input execution type, --* with the following {:#?}",
                     available_exec_types
                 );
                 exit(-1)
@@ -86,7 +100,7 @@ fn main() -> io::Result<()> {
             });
 
             if args.len() < 4 {
-                println!("ERROR: input file path");
+                println!("Usage: input file path");
                 println!("\t*.ha");
                 println!("\t*.hasm");
                 exit(-1)
@@ -100,12 +114,12 @@ fn main() -> io::Result<()> {
                 ExecType::ha => {
                     assert!(exc_path.ends_with(".ha"));
 
-                    vm.load_hasm_from_file(exc_path)?;
+                    vm.load_ha_from_file(exc_path)?;
                 }
                 ExecType::hasm => {
                     assert!(exc_path.ends_with(".hasm"));
 
-                    vm.load_ha_from_file(exc_path)?;
+                    vm.load_hasm_from_file(exc_path)?;
                 }
             }
 

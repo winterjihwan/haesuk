@@ -3,4 +3,4 @@ push 1
 dup 1
 dup 1
 add
-loop 2
+jmp 2
