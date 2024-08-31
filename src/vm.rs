@@ -51,14 +51,14 @@ impl VM {
         Ok(())
     }
 
-    pub fn load_program_from_memory(&mut self, program: Program) -> Result<(), VMError> {
+    pub fn load_ha_from_memory(&mut self, program: Program) -> Result<(), VMError> {
         self.program_size = program.insts.len();
         self.program = program;
 
         Ok(())
     }
 
-    pub fn load_program_from_file(&mut self, path: &str) -> Result<(), VMError> {
+    pub fn load_ha_from_file(&mut self, path: &str) -> Result<(), VMError> {
         let mut file = File::open(path).map_err(|err| VMError::IoFail {
             err: err.to_string(),
         })?;
