@@ -6,3 +6,14 @@ loop:
     dup 1
     add
     jmp loop
+
+jmp 2
+push 0
+push 1
+nop
+nop
+loop: dup 5
+    dup 1
+    dup 1
+    add
+    jmp loop
