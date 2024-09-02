@@ -38,22 +38,32 @@ impl Program {
 
         let insts = asm_insts
             .into_iter()
-            .map(|asm_inst| {
-                let elems: Vec<&str> = asm_inst.split(" ").collect();
-                match elems[0] {
-                    "push" => Ok(Inst::InstPush(elems[1].parse::<usize>().unwrap())),
+            .filter_map(|asm_inst| {
+                let inst: Vec<&str> = asm_inst
+                    .trim_start()
+                    .split(" ")
+                    .take_while(|elem| !elem.contains("#"))
+                    .collect();
+
+                if inst.is_empty() {
+                    return None;
+                }
+
+                Some(match inst[0] {
+                    "push" => Ok(Inst::InstPush(inst[1].parse::<usize>().unwrap())),
                     "add" => Ok(Inst::InstAdd),
                     "sub" => Ok(Inst::InstSub),
                     "mul" => Ok(Inst::InstMul),
                     "div" => Ok(Inst::InstDiv),
                     "halt" => Ok(Inst::InstHalt),
-                    "jmp" => Ok(Inst::InstJmp(elems[1].parse::<usize>().unwrap())),
-                    "eq" => Ok(Inst::InstEq(elems[1].parse::<usize>().unwrap())),
-                    "dup" => Ok(Inst::InstDup(elems[1].parse::<usize>().unwrap())),
+                    "jmp" => Ok(Inst::InstJmp(inst[1].parse::<usize>().unwrap())),
+                    "eq" => Ok(Inst::InstEq(inst[1].parse::<usize>().unwrap())),
+                    "dup" => Ok(Inst::InstDup(inst[1].parse::<usize>().unwrap())),
+                    "#" => Ok(Inst::InstHalt),
                     _ => Err(VMError::InvalidAsmInst {
-                        inst: elems[0].to_string(),
+                        inst: inst[0].to_string(),
                     }),
-                }
+                })
             })
             .collect::<Result<Vec<Inst>, VMError>>()?;
 
