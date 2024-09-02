@@ -23,9 +23,9 @@ pub use vm::*;
 #[derive(EnumString, EnumIter, AsRefStr, Debug)]
 #[allow(non_camel_case_types)]
 pub enum Cmd {
-    assembly,
+    hasm,
     emulate,
-    disassembly,
+    dehasm,
 }
 
 fn main() -> io::Result<()> {
@@ -49,7 +49,7 @@ fn main() -> io::Result<()> {
     });
 
     match cmd {
-        Cmd::assembly => {
+        Cmd::hasm => {
             if args.len() < 3 {
                 println!("Usage: input path args");
                 println!("\t*.hasm");
@@ -63,7 +63,7 @@ fn main() -> io::Result<()> {
             hasm_to_ha(hasm_path)?;
         }
 
-        Cmd::disassembly => {
+        Cmd::dehasm => {
             if args.len() < 3 {
                 println!("Usage: input path args");
                 println!("\t*.ha");
@@ -81,15 +81,29 @@ fn main() -> io::Result<()> {
             if args.len() < 3 {
                 println!("Usage: input path args");
                 println!("\t*.ha");
+                println!("Extra optional args: limit");
+                println!("\tlimit __");
                 exit(-1)
             }
+
+            let maybe_limit = if args.len() > 3 {
+                if args.len() < 5 {
+                    println!("Usage: input limit");
+                    println!("\t0~2^16");
+                    exit(-1)
+                }
+
+                Some(args[4].parse::<u16>().unwrap())
+            } else {
+                None
+            };
 
             let eml_path = &args[2];
             assert!(eml_path.ends_with(".ha"));
 
             let mut vm = VM::new();
             vm.load_ha_from_file(eml_path)?;
-            vm.run().map_err(io::Error::from)?;
+            vm.run(maybe_limit).map_err(io::Error::from)?;
             vm.dump();
         }
     };

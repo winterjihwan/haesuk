@@ -1,7 +1,10 @@
+jmp 6
 push 0
 push 1
-loop: 
-    dup 1
-    dup 1
-    add
-    jmp loop
+nop
+nop
+nop
+dup 1
+dup 1
+add
+jmp 6

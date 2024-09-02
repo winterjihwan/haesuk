@@ -79,9 +79,14 @@ impl VM {
         Ok(())
     }
 
-    pub fn run(&mut self) -> Result<(), VMError> {
-        let mut loop_count = 0;
-        while !self.halt && loop_count < 60 {
+    pub fn run(&mut self, limit: Option<u16>) -> Result<(), VMError> {
+        let limit = match limit {
+            Some(l) => l,
+            None => 64,
+        };
+
+        let mut loop_count: u16 = 0;
+        while !self.halt && loop_count < limit {
             if self.ip >= self.program_size {
                 return Err(VMError::SegmentFault);
             }
@@ -170,6 +175,7 @@ impl VM {
                     self.stack_size += 1;
                     self.ip += 1;
                 }
+                Inst::InstNop => {}
             }
             loop_count += 1
         }

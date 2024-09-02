@@ -19,7 +19,7 @@ struct HMCache<K, V> {
 #[derive(Default, Debug)]
 struct TranslationContext<'a> {
     label_table: HMCache<String, u16>,
-    unresolved_jmps: HMCache<&'a str, u16>,
+    unresolved_jmps: HMCache<u16, &'a str>,
 }
 
 impl Program {
@@ -77,6 +77,7 @@ impl Program {
                     let label = inst.first()?.replace(":", "");
                     assert!(tc.label_table.cache_size + 1 < LABLE_TABLE_CAPACITY);
                     tc.label_table.hash_map.insert(label, program_size_t);
+                    tc.label_table.cache_size += 1;
 
                     return None;
                 }
@@ -92,11 +93,13 @@ impl Program {
                         "jmp" => {
                             let operand = inst[1];
                             assert!(tc.unresolved_jmps.cache_size + 1 < UNRESOLVED_JUMPS_CAPACITY);
-                            tc.unresolved_jmps.hash_map.insert(operand, program_size_t);
+                            tc.unresolved_jmps.hash_map.insert(program_size_t, operand);
+                            tc.unresolved_jmps.cache_size += 1;
                             Ok(Inst::InstJmp(0))
                         }
                         "eq" => Ok(Inst::InstEq(inst[1].parse::<Word>().unwrap())),
                         "dup" => Ok(Inst::InstDup(inst[1].parse::<Word>().unwrap())),
+                        "nop" => Ok(Inst::InstNop),
                         "#" => Ok(Inst::InstHalt),
                         _ => Err(VMError::InvalidAsmInst {
                             inst: inst[0].to_string(),
@@ -111,7 +114,7 @@ impl Program {
         tc.unresolved_jmps
             .hash_map
             .into_iter()
-            .try_for_each(|(label, inst_index)| {
+            .try_for_each(|(inst_index, label)| {
                 if let Inst::InstJmp(_) = &mut insts[inst_index as usize] {
                     let resolved_label = tc
                         .label_table
@@ -140,6 +143,7 @@ impl Program {
                 Inst::InstJmp(operand) => format!("jmp {}", operand),
                 Inst::InstEq(operand) => format!("eq {}", operand),
                 Inst::InstDup(operand) => format!("dup {}", operand),
+                Inst::InstNop => "nop".to_string(),
             })
             .collect::<Vec<String>>()
     }

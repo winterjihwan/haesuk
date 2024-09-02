@@ -11,6 +11,7 @@ pub enum Inst {
     InstJmp(Word),
     InstEq(Word),
     InstDup(Word),
+    InstNop,
 }
 
 impl Inst {
@@ -25,6 +26,7 @@ impl Inst {
             Inst::InstJmp(_) => 0x07,
             Inst::InstEq(_) => 0x08,
             Inst::InstDup(_) => 0x09,
+            Inst::InstNop => 0x0A,
         }
     }
 
@@ -39,6 +41,7 @@ impl Inst {
             0x07 => Some(Inst::InstJmp(0)),
             0x08 => Some(Inst::InstEq(0)),
             0x09 => Some(Inst::InstDup(0)),
+            0x0A => Some(Inst::InstNop),
             _ => None,
         }
     }
@@ -68,6 +71,7 @@ impl Inst {
             Inst::InstJmp(operand) => *self.serialize_operand(&mut bytes, operand),
             Inst::InstEq(operand) => *self.serialize_operand(&mut bytes, operand),
             Inst::InstDup(operand) => *self.serialize_operand(&mut bytes, operand),
+            Inst::InstNop => *self.serialize(&mut bytes),
         }
     }
 
