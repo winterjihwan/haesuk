@@ -35,6 +35,9 @@ pub enum VMError {
 
     #[error("I/O fail, err: {err}")]
     IoFail { err: String },
+
+    #[error("Resolve label fail")]
+    ResolveLabelFail,
 }
 
 impl From<VMError> for io::Error {

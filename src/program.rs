@@ -1,8 +1,25 @@
-use crate::{inst::Inst, VMError};
+use std::{collections::HashMap, u16};
+
+use crate::{inst::Inst, VMError, Word};
+
+const LABLE_TABLE_CAPACITY: u16 = u16::MAX;
+const UNRESOLVED_JUMPS_CAPACITY: u16 = u16::MAX;
 
 #[derive(Default, Debug)]
 pub struct Program {
     pub insts: Vec<Inst>,
+}
+
+#[derive(Default, Debug)]
+struct HMCache<K, V> {
+    pub hash_map: HashMap<K, V>,
+    pub cache_size: u16,
+}
+
+#[derive(Default, Debug)]
+struct TranslationContext<'a> {
+    label_table: HMCache<String, u16>,
+    unresolved_jmps: HMCache<&'a str, u16>,
 }
 
 impl Program {
@@ -31,14 +48,21 @@ impl Program {
     }
 
     pub fn from_hasm(asm: &String) -> Result<Self, VMError> {
+        let mut tc = TranslationContext::default();
+        let mut program_size_t: u16 = 0;
+
         let asm_insts: Vec<&str> = asm
             .split("\n")
             .filter(|inst| !inst.trim().is_empty())
             .collect();
 
-        let insts = asm_insts
+        let mut insts = asm_insts
             .into_iter()
             .filter_map(|asm_inst| {
+                // \tpush 3 # why not push 4?
+                // push 3 # why not push 4?
+                // ["push", "3", "#", "why", "not", "push", "4"]
+                // ["push", "3"]
                 let inst: Vec<&str> = asm_inst
                     .trim_start()
                     .split(" ")
@@ -49,23 +73,56 @@ impl Program {
                     return None;
                 }
 
-                Some(match inst[0] {
-                    "push" => Ok(Inst::InstPush(inst[1].parse::<usize>().unwrap())),
-                    "add" => Ok(Inst::InstAdd),
-                    "sub" => Ok(Inst::InstSub),
-                    "mul" => Ok(Inst::InstMul),
-                    "div" => Ok(Inst::InstDiv),
-                    "halt" => Ok(Inst::InstHalt),
-                    "jmp" => Ok(Inst::InstJmp(inst[1].parse::<usize>().unwrap())),
-                    "eq" => Ok(Inst::InstEq(inst[1].parse::<usize>().unwrap())),
-                    "dup" => Ok(Inst::InstDup(inst[1].parse::<usize>().unwrap())),
-                    "#" => Ok(Inst::InstHalt),
-                    _ => Err(VMError::InvalidAsmInst {
-                        inst: inst[0].to_string(),
-                    }),
+                if inst.first()?.ends_with(":") {
+                    let label = inst.first()?.replace(":", "");
+                    assert!(tc.label_table.cache_size + 1 < LABLE_TABLE_CAPACITY);
+                    tc.label_table.hash_map.insert(label, program_size_t);
+
+                    return None;
+                }
+
+                Some({
+                    let inst = match inst[0] {
+                        "push" => Ok(Inst::InstPush(inst[1].parse::<Word>().unwrap())),
+                        "add" => Ok(Inst::InstAdd),
+                        "sub" => Ok(Inst::InstSub),
+                        "mul" => Ok(Inst::InstMul),
+                        "div" => Ok(Inst::InstDiv),
+                        "halt" => Ok(Inst::InstHalt),
+                        "jmp" => {
+                            let operand = inst[1];
+                            assert!(tc.unresolved_jmps.cache_size + 1 < UNRESOLVED_JUMPS_CAPACITY);
+                            tc.unresolved_jmps.hash_map.insert(operand, program_size_t);
+                            Ok(Inst::InstJmp(0))
+                        }
+                        "eq" => Ok(Inst::InstEq(inst[1].parse::<Word>().unwrap())),
+                        "dup" => Ok(Inst::InstDup(inst[1].parse::<Word>().unwrap())),
+                        "#" => Ok(Inst::InstHalt),
+                        _ => Err(VMError::InvalidAsmInst {
+                            inst: inst[0].to_string(),
+                        }),
+                    };
+                    program_size_t += 1;
+                    inst
                 })
             })
             .collect::<Result<Vec<Inst>, VMError>>()?;
+
+        tc.unresolved_jmps
+            .hash_map
+            .into_iter()
+            .try_for_each(|(label, inst_index)| {
+                if let Inst::InstJmp(_) = &mut insts[inst_index as usize] {
+                    let resolved_label = tc
+                        .label_table
+                        .hash_map
+                        .get(label)
+                        .ok_or(VMError::ResolveLabelFail)?;
+                    insts[inst_index as usize] = Inst::InstJmp((*resolved_label).into())
+                }
+
+                Ok(())
+            })?;
 
         Ok(Self { insts })
     }

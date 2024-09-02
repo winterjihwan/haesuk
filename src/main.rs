@@ -1,3 +1,4 @@
+mod dehasm;
 mod errors;
 mod hasm;
 mod inst;
@@ -5,8 +6,9 @@ mod macros;
 mod program;
 mod vm;
 
+use dehasm::ha_to_hasm;
 pub use errors::*;
-use hasm::{ha_to_hasm, hasm_to_ha};
+use hasm::hasm_to_ha;
 use std::{
     env,
     io::{self},
@@ -24,13 +26,6 @@ pub enum Cmd {
     assembly,
     emulate,
     disassembly,
-}
-
-#[derive(EnumString, EnumIter, AsRefStr, Debug)]
-#[allow(non_camel_case_types)]
-pub enum ExecType {
-    ha,
-    hasm,
 }
 
 fn main() -> io::Result<()> {
@@ -67,6 +62,7 @@ fn main() -> io::Result<()> {
 
             hasm_to_ha(hasm_path)?;
         }
+
         Cmd::disassembly => {
             if args.len() < 3 {
                 println!("Usage: input path args");
@@ -80,49 +76,19 @@ fn main() -> io::Result<()> {
 
             ha_to_hasm(hasm_path)?;
         }
+
         Cmd::emulate => {
-            let available_exec_types: Vec<ExecType> = ExecType::iter().map(|ext| ext).collect();
-
             if args.len() < 3 {
-                println!(
-                    "Usage: input execution type, --* with the following {:#?}",
-                    available_exec_types
-                );
-                exit(-1)
-            }
-
-            let exec_type = ExecType::from_str(&args[2].as_ref()).unwrap_or_else(|_| {
-                println!(
-                    "ERROR: invalid execution type, --* with the following {:#?}",
-                    available_exec_types
-                );
-                exit(1);
-            });
-
-            if args.len() < 4 {
-                println!("Usage: input file path");
+                println!("Usage: input path args");
                 println!("\t*.ha");
-                println!("\t*.hasm");
                 exit(-1)
             }
 
-            let exc_path = &args[3];
+            let eml_path = &args[2];
+            assert!(eml_path.ends_with(".ha"));
+
             let mut vm = VM::new();
-            println!("Execution path: {}", exc_path);
-
-            match exec_type {
-                ExecType::ha => {
-                    assert!(exc_path.ends_with(".ha"));
-
-                    vm.load_ha_from_file(exc_path)?;
-                }
-                ExecType::hasm => {
-                    assert!(exc_path.ends_with(".hasm"));
-
-                    vm.load_hasm_from_file(exc_path)?;
-                }
-            }
-
+            vm.load_ha_from_file(eml_path)?;
             vm.run().map_err(io::Error::from)?;
             vm.dump();
         }

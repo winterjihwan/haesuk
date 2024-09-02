@@ -31,6 +31,7 @@ impl VM {
         }
     }
 
+    #[deprecated]
     pub fn load_hasm_from_file(&mut self, path: &str) -> Result<(), VMError> {
         let mut file = File::open(path).map_err(|err| VMError::IoFail {
             err: err.to_string(),
