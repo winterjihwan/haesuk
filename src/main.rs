@@ -30,8 +30,7 @@ pub enum Cmd {
 }
 
 fn main() -> io::Result<()> {
-    //run_haesuk()?;
-    nanbox::nanbox();
+    run_haesuk()?;
     Ok(())
 }
 
