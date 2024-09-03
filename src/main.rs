@@ -3,6 +3,7 @@ mod errors;
 mod hasm;
 mod inst;
 mod macros;
+mod nanbox;
 mod program;
 mod vm;
 
@@ -29,6 +30,12 @@ pub enum Cmd {
 }
 
 fn main() -> io::Result<()> {
+    //run_haesuk()?;
+    nanbox::nanbox();
+    Ok(())
+}
+
+fn run_haesuk() -> io::Result<()> {
     let avaiable_cmds: Vec<Cmd> = Cmd::iter().map(|cmd| cmd).collect();
 
     let args: Vec<String> = env::args().collect();

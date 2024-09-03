@@ -3,7 +3,7 @@ use std::{collections::HashMap, u16};
 use crate::{inst::Inst, VMError, Word};
 
 pub const LABLE_TABLE_CAPACITY: u16 = u16::MAX;
-pub const UNRESOLVED_JUMPS_CAPACITY: u16 = u16::MAX;
+pub const DEFERRED_OPERANDS_CAPACITY: u16 = u16::MAX;
 
 #[derive(Default, Debug)]
 pub struct Program {
@@ -19,7 +19,7 @@ pub struct HMCache<K, V> {
 #[derive(Default, Debug)]
 pub struct TranslationContext {
     pub label_table: HMCache<String, u16>,
-    pub unresolved_jmps: HMCache<u16, String>,
+    pub defered_operands: HMCache<u16, String>,
 }
 
 impl Program {
@@ -89,12 +89,12 @@ impl Program {
                                 Ok(Inst::InstJmp(operand.parse::<Word>().unwrap()))
                             } else {
                                 assert!(
-                                    tc.unresolved_jmps.cache_size + 1 < UNRESOLVED_JUMPS_CAPACITY
+                                    tc.defered_operands.cache_size + 1 < DEFERRED_OPERANDS_CAPACITY
                                 );
-                                tc.unresolved_jmps
+                                tc.defered_operands
                                     .hash_map
                                     .insert(*program_size_t, operand.to_string());
-                                tc.unresolved_jmps.cache_size += 1;
+                                tc.defered_operands.cache_size += 1;
                                 Ok(Inst::InstJmp(0))
                             }
                         }
@@ -131,7 +131,7 @@ impl Program {
             })
             .collect::<Result<Vec<Inst>, VMError>>()?;
 
-        tc.unresolved_jmps
+        tc.defered_operands
             .hash_map
             .into_iter()
             .try_for_each(|(inst_index, label)| {
@@ -146,8 +146,6 @@ impl Program {
 
                 Ok(())
             })?;
-
-        println!("Final insts: {:#?}", insts);
 
         Ok(Self { insts })
     }
