@@ -251,7 +251,7 @@ impl VM {
     pub fn dump(&self) {
         println!("Stack: ");
         (0..self.stack_size).for_each(|n| {
-            println!("\t{:?}", self.stack[n]);
+            println!("\t{}", self.stack[n]);
         })
     }
 }

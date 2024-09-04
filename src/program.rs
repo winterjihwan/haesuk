@@ -78,10 +78,17 @@ impl Program {
                 let mut interpret_hasm = |inst: Vec<&str>, program_size_t: &mut u16| {
                     let inst = match inst[0] {
                         "push" => Ok(Inst::InstPush(inst[1].parse::<u64>().unwrap().into())),
-                        "add" => Ok(Inst::InstAddi),
-                        "sub" => Ok(Inst::InstSubi),
-                        "mul" => Ok(Inst::InstMuli),
-                        "div" => Ok(Inst::InstDivi),
+
+                        "addi" => Ok(Inst::InstAddi),
+                        "subi" => Ok(Inst::InstSubi),
+                        "muli" => Ok(Inst::InstMuli),
+                        "divi" => Ok(Inst::InstDivi),
+
+                        "addf" => Ok(Inst::InstAddf),
+                        "subf" => Ok(Inst::InstSubf),
+                        "mulf" => Ok(Inst::InstMulf),
+                        "divf" => Ok(Inst::InstDivf),
+
                         "halt" => Ok(Inst::InstHalt),
                         "jmp" => {
                             let operand = inst[1];

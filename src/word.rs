@@ -1,8 +1,6 @@
-use std::process::exit;
+use std::{fmt::Display, process::exit};
 
-use strum_macros::Display;
-
-#[derive(Debug, PartialEq, Clone, Copy, Display)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 #[allow(non_camel_case_types)]
 pub enum Word {
     i64(i64),
@@ -17,12 +15,23 @@ impl Word {
             Self::i64(n) => n.to_le_bytes(),
             Self::u64(n) => n.to_le_bytes(),
             Self::f64(n) => n.to_le_bytes(),
-            Self::ptr(n) => panic!(),
+            Self::ptr(n) => (*n as u64).to_le_bytes(),
         }
     }
 
     pub fn from_le_bytes<T: FromLeBytes + Into<Word>>(bytes: [u8; 8]) -> Word {
         (T::from_le_bytes(bytes)).into()
+    }
+}
+
+impl Display for Word {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Word::i64(n) => write!(f, "{}", n),
+            Word::u64(n) => write!(f, "{}", n),
+            Word::f64(n) => write!(f, "{}", n),
+            Word::ptr(p) => write!(f, "{:?}", *p),
+        }
     }
 }
 
