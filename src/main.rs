@@ -3,9 +3,11 @@ mod errors;
 mod hasm;
 mod inst;
 mod macros;
+#[allow(dead_code)]
 mod nanbox;
 mod program;
 mod vm;
+mod word;
 
 use dehasm::ha_to_hasm;
 pub use errors::*;

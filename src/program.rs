@@ -1,6 +1,6 @@
 use std::{collections::HashMap, u16};
 
-use crate::{inst::Inst, VMError, Word};
+use crate::{inst::Inst, word::Word, VMError};
 
 pub const LABLE_TABLE_CAPACITY: u16 = u16::MAX;
 pub const DEFERRED_OPERANDS_CAPACITY: u16 = u16::MAX;
@@ -77,16 +77,16 @@ impl Program {
 
                 let mut interpret_hasm = |inst: Vec<&str>, program_size_t: &mut u16| {
                     let inst = match inst[0] {
-                        "push" => Ok(Inst::InstPush(inst[1].parse::<Word>().unwrap())),
-                        "add" => Ok(Inst::InstAdd),
-                        "sub" => Ok(Inst::InstSub),
-                        "mul" => Ok(Inst::InstMul),
-                        "div" => Ok(Inst::InstDiv),
+                        "push" => Ok(Inst::InstPush(inst[1].parse::<u64>().unwrap().into())),
+                        "add" => Ok(Inst::InstAddi),
+                        "sub" => Ok(Inst::InstSubi),
+                        "mul" => Ok(Inst::InstMuli),
+                        "div" => Ok(Inst::InstDivi),
                         "halt" => Ok(Inst::InstHalt),
                         "jmp" => {
                             let operand = inst[1];
                             if operand.chars().next().unwrap().is_numeric() {
-                                Ok(Inst::InstJmp(operand.parse::<Word>().unwrap()))
+                                Ok(Inst::InstJmp(operand.parse::<u64>().unwrap().into()))
                             } else {
                                 assert!(
                                     tc.defered_operands.cache_size + 1 < DEFERRED_OPERANDS_CAPACITY
@@ -95,11 +95,11 @@ impl Program {
                                     .hash_map
                                     .insert(*program_size_t, operand.to_string());
                                 tc.defered_operands.cache_size += 1;
-                                Ok(Inst::InstJmp(0))
+                                Ok(Inst::InstJmp(Word::u64(0)))
                             }
                         }
-                        "eq" => Ok(Inst::InstEq(inst[1].parse::<Word>().unwrap())),
-                        "dup" => Ok(Inst::InstDup(inst[1].parse::<Word>().unwrap())),
+                        "eq" => Ok(Inst::InstEq(inst[1].parse::<u64>().unwrap().into())),
+                        "dup" => Ok(Inst::InstDup(inst[1].parse::<u64>().unwrap().into())),
                         "nop" => Ok(Inst::InstNop),
                         "#" => Ok(Inst::InstHalt),
                         _ => Err(VMError::InvalidAsmInst {
@@ -141,7 +141,7 @@ impl Program {
                         .hash_map
                         .get(&label)
                         .ok_or(VMError::ResolveLabelFail)?;
-                    insts[inst_index as usize] = Inst::InstJmp((*resolved_label).into())
+                    insts[inst_index as usize] = Inst::InstJmp(((*resolved_label) as u64).into())
                 }
 
                 Ok(())
@@ -155,10 +155,17 @@ impl Program {
             .iter()
             .map(|inst| match inst {
                 Inst::InstPush(operand) => format!("push {}", operand),
-                Inst::InstAdd => "add".to_string(),
-                Inst::InstSub => "sub".to_string(),
-                Inst::InstMul => "mul".to_string(),
-                Inst::InstDiv => "div".to_string(),
+
+                Inst::InstAddi => "addi".to_string(),
+                Inst::InstSubi => "subi".to_string(),
+                Inst::InstMuli => "muli".to_string(),
+                Inst::InstDivi => "divi".to_string(),
+
+                Inst::InstAddf => "addf".to_string(),
+                Inst::InstSubf => "subf".to_string(),
+                Inst::InstMulf => "mulf".to_string(),
+                Inst::InstDivf => "divf".to_string(),
+
                 Inst::InstHalt => "halt".to_string(),
                 Inst::InstJmp(operand) => format!("jmp {}", operand),
                 Inst::InstEq(operand) => format!("eq {}", operand),

@@ -1,10 +1,8 @@
 use std::{fs::File, io::Read};
 
-use crate::{inst::Inst, program::Program, VMError};
+use crate::{inst::Inst, program::Program, word::Word, VMError};
 
 const STACK_SIZE_LIMIT: usize = 1024;
-
-pub type Word = usize;
 
 #[derive(Debug)]
 pub struct VM {
@@ -21,7 +19,7 @@ pub struct VM {
 impl VM {
     pub fn new() -> Self {
         Self {
-            stack: [0; 1024],
+            stack: [Word::i64(0); 1024],
             stack_size: 0,
 
             program: Program::default(),
@@ -103,43 +101,107 @@ impl VM {
                     self.stack_size += 1;
                     self.ip += 1;
                 }
-                Inst::InstAdd => {
+                Inst::InstAddi => {
+                    if self.stack_size <= 2 {
+                        return Err(VMError::StackUnderflow { inst: inst.clone() });
+                    }
+                    self.stack[self.stack_size - 2] = Word::i64(
+                        i64::from(self.stack[self.stack_size - 2])
+                            + i64::from(self.stack[self.stack_size - 1]),
+                    );
+                    self.stack_size -= 1;
+                    self.ip += 1;
+                }
+                Inst::InstSubi => {
                     if self.stack_size <= 2 {
                         return Err(VMError::StackUnderflow { inst: inst.clone() });
                     }
 
-                    self.stack[self.stack_size - 2] += self.stack[self.stack_size - 1];
+                    self.stack[self.stack_size - 2] = Word::i64(
+                        i64::from(self.stack[self.stack_size - 2])
+                            - i64::from(self.stack[self.stack_size - 1]),
+                    );
                     self.stack_size -= 1;
                     self.ip += 1;
                 }
-                Inst::InstSub => {
+                Inst::InstMuli => {
                     if self.stack_size <= 2 {
                         return Err(VMError::StackUnderflow { inst: inst.clone() });
                     }
 
-                    self.stack[self.stack_size - 2] -= self.stack[self.stack_size - 1];
+                    self.stack[self.stack_size - 2] = Word::i64(
+                        i64::from(self.stack[self.stack_size - 2])
+                            * i64::from(self.stack[self.stack_size - 1]),
+                    );
                     self.stack_size -= 1;
                     self.ip += 1;
                 }
-                Inst::InstMul => {
-                    if self.stack_size <= 2 {
-                        return Err(VMError::StackUnderflow { inst: inst.clone() });
-                    }
-
-                    self.stack[self.stack_size - 2] *= self.stack[self.stack_size - 1];
-                    self.stack_size -= 1;
-                    self.ip += 1;
-                }
-                Inst::InstDiv => {
+                Inst::InstDivi => {
                     if self.stack_size < 2 {
                         return Err(VMError::StackUnderflow { inst: inst.clone() });
                     }
 
-                    if self.stack[self.stack_size - 2] == 0 {
+                    // Todo: 0 for all types?
+                    if self.stack[self.stack_size - 2] == Word::u64(0) {
                         return Err(VMError::DivisionByZero);
                     }
 
-                    self.stack[self.stack_size - 2] /= self.stack[self.stack_size - 1];
+                    self.stack[self.stack_size - 2] = Word::i64(
+                        i64::from(self.stack[self.stack_size - 2])
+                            / i64::from(self.stack[self.stack_size - 1]),
+                    );
+                    self.stack_size -= 1;
+                    self.ip += 1;
+                }
+                Inst::InstAddf => {
+                    if self.stack_size <= 2 {
+                        return Err(VMError::StackUnderflow { inst: inst.clone() });
+                    }
+                    self.stack[self.stack_size - 2] = Word::i64(
+                        i64::from(self.stack[self.stack_size - 2])
+                            + i64::from(self.stack[self.stack_size - 1]),
+                    );
+                    self.stack_size -= 1;
+                    self.ip += 1;
+                }
+                Inst::InstSubf => {
+                    if self.stack_size <= 2 {
+                        return Err(VMError::StackUnderflow { inst: inst.clone() });
+                    }
+
+                    self.stack[self.stack_size - 2] = Word::i64(
+                        i64::from(self.stack[self.stack_size - 2])
+                            - i64::from(self.stack[self.stack_size - 1]),
+                    );
+                    self.stack_size -= 1;
+                    self.ip += 1;
+                }
+                Inst::InstMulf => {
+                    if self.stack_size <= 2 {
+                        return Err(VMError::StackUnderflow { inst: inst.clone() });
+                    }
+
+                    self.stack[self.stack_size - 2] = Word::i64(
+                        i64::from(self.stack[self.stack_size - 2])
+                            * i64::from(self.stack[self.stack_size - 1]),
+                    );
+                    self.stack_size -= 1;
+                    self.ip += 1;
+                }
+                Inst::InstDivf => {
+                    if self.stack_size < 2 {
+                        return Err(VMError::StackUnderflow { inst: inst.clone() });
+                    }
+
+                    // Todo: 0 for all types?
+                    if self.stack[self.stack_size - 2] == Word::u64(0) {
+                        return Err(VMError::DivisionByZero);
+                    }
+
+                    self.stack[self.stack_size - 2] = Word::i64(
+                        i64::from(self.stack[self.stack_size - 2])
+                            / i64::from(self.stack[self.stack_size - 1]),
+                    );
                     self.stack_size -= 1;
                     self.ip += 1;
                 }
@@ -147,7 +209,8 @@ impl VM {
                     self.halt = true;
                 }
                 Inst::InstJmp(operand) => {
-                    self.ip = *operand;
+                    let n: u64 = (*operand).into();
+                    self.ip = n as usize;
                 }
                 Inst::InstEq(operand) => {
                     if self.stack_size >= STACK_SIZE_LIMIT {
@@ -155,15 +218,16 @@ impl VM {
                     }
 
                     self.stack[self.stack_size] = if self.stack[self.stack_size - 1] == *operand {
-                        1
+                        Word::u64(1)
                     } else {
-                        0
+                        Word::u64(0)
                     };
                     self.stack_size += 1;
                     self.ip += 1;
                 }
                 Inst::InstDup(operand) => {
-                    if self.stack_size - operand <= 0 {
+                    let operand_u64 = u64::from(*operand);
+                    if self.stack_size as u64 - operand_u64 <= 0 {
                         return Err(VMError::StackUnderflow { inst: inst.clone() });
                     }
 
@@ -171,7 +235,8 @@ impl VM {
                         return Err(VMError::StackOverflow { inst: inst.clone() });
                     }
 
-                    self.stack[self.stack_size] = self.stack[self.stack_size - 1 - operand];
+                    self.stack[self.stack_size] =
+                        self.stack[self.stack_size - 1 - operand_u64 as usize];
                     self.stack_size += 1;
                     self.ip += 1;
                 }
@@ -186,7 +251,7 @@ impl VM {
     pub fn dump(&self) {
         println!("Stack: ");
         (0..self.stack_size).for_each(|n| {
-            println!("\t{}", self.stack[n]);
+            println!("\t{:?}", self.stack[n]);
         })
     }
 }

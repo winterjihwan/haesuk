@@ -13,21 +13,6 @@ pub enum NanType {
     FloatType,
 }
 
-//pub fn nanbox() {
-//    let start = f64::NAN;
-//    inspect_f64(start, "start");
-//
-//    let next = set_type(start, NanType::PointerType);
-//    inspect_f64(next, "next");
-//
-//    assert_eq!(extract_type(next), NanType::PointerType);
-//
-//    let next = set_value(next, 1);
-//    inspect_f64(next, "next");
-//
-//    assert_eq!(extract_value(next), 1);
-//}
-
 fn extract_type(f: f64) -> NanType {
     if !is_nan(f) {
         return NanType::FloatType;

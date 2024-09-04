@@ -1,12 +1,18 @@
-use crate::{VMError, Word};
+use crate::{word::Word, VMError};
 
 #[derive(Debug, Clone)]
 pub enum Inst {
     InstPush(Word),
-    InstAdd,
-    InstSub,
-    InstMul,
-    InstDiv,
+    InstAddi,
+    InstSubi,
+    InstMuli,
+    InstDivi,
+
+    InstAddf,
+    InstSubf,
+    InstMulf,
+    InstDivf,
+
     InstHalt,
     InstJmp(Word),
     InstEq(Word),
@@ -18,30 +24,44 @@ impl Inst {
     pub fn ser_opcode(&self) -> u8 {
         match self {
             Inst::InstPush(_) => 0x01,
-            Inst::InstAdd => 0x02,
-            Inst::InstSub => 0x03,
-            Inst::InstMul => 0x04,
-            Inst::InstDiv => 0x05,
-            Inst::InstHalt => 0x06,
-            Inst::InstJmp(_) => 0x07,
-            Inst::InstEq(_) => 0x08,
-            Inst::InstDup(_) => 0x09,
-            Inst::InstNop => 0x0A,
+
+            Inst::InstAddi => 0x02,
+            Inst::InstSubi => 0x03,
+            Inst::InstMuli => 0x04,
+            Inst::InstDivi => 0x05,
+
+            Inst::InstAddf => 0x06,
+            Inst::InstSubf => 0x07,
+            Inst::InstMulf => 0x08,
+            Inst::InstDivf => 0x09,
+
+            Inst::InstHalt => 0x0A,
+            Inst::InstJmp(_) => 0x0B,
+            Inst::InstEq(_) => 0x0C,
+            Inst::InstDup(_) => 0x0D,
+            Inst::InstNop => 0x0E,
         }
     }
 
     pub fn deser_opcode(opcode: u8) -> Option<Self> {
         match opcode {
-            0x01 => Some(Inst::InstPush(0)),
-            0x02 => Some(Inst::InstAdd),
-            0x03 => Some(Inst::InstSub),
-            0x04 => Some(Inst::InstMul),
-            0x05 => Some(Inst::InstDiv),
-            0x06 => Some(Inst::InstHalt),
-            0x07 => Some(Inst::InstJmp(0)),
-            0x08 => Some(Inst::InstEq(0)),
-            0x09 => Some(Inst::InstDup(0)),
-            0x0A => Some(Inst::InstNop),
+            0x01 => Some(Inst::InstPush(Word::u64(0))),
+
+            0x02 => Some(Inst::InstAddi),
+            0x03 => Some(Inst::InstSubi),
+            0x04 => Some(Inst::InstMuli),
+            0x05 => Some(Inst::InstDivi),
+
+            0x06 => Some(Inst::InstAddf),
+            0x07 => Some(Inst::InstSubf),
+            0x08 => Some(Inst::InstMulf),
+            0x09 => Some(Inst::InstDivf),
+
+            0x0A => Some(Inst::InstHalt),
+            0x0B => Some(Inst::InstJmp(Word::u64(0))),
+            0x0C => Some(Inst::InstEq(Word::u64(0))),
+            0x0D => Some(Inst::InstDup(Word::u64(0))),
+            0x0E => Some(Inst::InstNop),
             _ => None,
         }
     }
@@ -53,7 +73,7 @@ impl Inst {
     }
 
     pub fn serialize_operand<'a>(&self, bytes: &'a mut [u8; 16], operand: &Word) -> &'a [u8; 16] {
-        bytes[0..8].copy_from_slice(&(self.ser_opcode() as u64).to_le_bytes());
+        bytes[0..8].copy_from_slice(&(self.ser_opcode() as usize).to_le_bytes());
         bytes[8..16].copy_from_slice(&operand.to_le_bytes());
 
         bytes
@@ -63,10 +83,16 @@ impl Inst {
         let mut bytes = [0u8; 16];
         match self {
             Inst::InstPush(operand) => *self.serialize_operand(&mut bytes, operand),
-            Inst::InstAdd => *self.serialize(&mut bytes),
-            Inst::InstSub => *self.serialize(&mut bytes),
-            Inst::InstMul => *self.serialize(&mut bytes),
-            Inst::InstDiv => *self.serialize(&mut bytes),
+
+            Inst::InstAddi
+            | Inst::InstSubi
+            | Inst::InstMuli
+            | Inst::InstDivi
+            | Inst::InstAddf
+            | Inst::InstSubf
+            | Inst::InstMulf
+            | Inst::InstDivf => *self.serialize(&mut bytes),
+
             Inst::InstHalt => *self.serialize(&mut bytes),
             Inst::InstJmp(operand) => *self.serialize_operand(&mut bytes, operand),
             Inst::InstEq(operand) => *self.serialize_operand(&mut bytes, operand),
@@ -75,12 +101,12 @@ impl Inst {
         }
     }
 
-    fn with_operand(self, operand: usize) -> Self {
+    fn with_operand(self, op_bytes: &mut [u8; 8]) -> Self {
         match self {
-            Inst::InstPush(_) => Inst::InstPush(operand),
-            Inst::InstJmp(_) => Inst::InstJmp(operand),
-            Inst::InstEq(_) => Inst::InstEq(operand),
-            Inst::InstDup(_) => Inst::InstDup(operand),
+            Inst::InstPush(_) => Inst::InstPush(Word::from_le_bytes::<i64>(*op_bytes)),
+            Inst::InstJmp(_) => Inst::InstJmp(Word::from_le_bytes::<u64>(*op_bytes)),
+            Inst::InstEq(_) => Inst::InstEq(Word::from_le_bytes::<u64>(*op_bytes)),
+            Inst::InstDup(_) => Inst::InstDup(Word::from_le_bytes::<u64>(*op_bytes)),
             _ => self,
         }
     }
@@ -88,13 +114,8 @@ impl Inst {
     pub fn from_bytes(bytes: &mut [u8; 16]) -> Result<Self, VMError> {
         let inst = Inst::deser_opcode(bytes[0]).ok_or(VMError::DeserializeOpcodeFail)?;
 
-        let operand = usize::from_le_bytes(
-            bytes[8..16]
-                .try_into()
-                .map_err(|_| VMError::ParseLeBytesFail)?,
-        );
-
-        let inst = inst.with_operand(operand);
+        let mut op_bytes: [u8; 8] = bytes[8..16].try_into().unwrap();
+        let inst = inst.with_operand(&mut op_bytes);
 
         Ok(inst)
     }
