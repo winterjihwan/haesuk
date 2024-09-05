@@ -1,6 +1,6 @@
-use std::{fmt::Display, process::exit};
+use std::fmt::Display;
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[allow(non_camel_case_types)]
 pub enum Word {
     i64(i64),
@@ -32,6 +32,12 @@ impl Display for Word {
             Word::f64(n) => write!(f, "{}", n),
             Word::ptr(p) => write!(f, "{:?}", *p),
         }
+    }
+}
+
+impl Default for Word {
+    fn default() -> Self {
+        Word::u64(0)
     }
 }
 
@@ -74,7 +80,9 @@ impl From<Word> for i64 {
     fn from(word: Word) -> Self {
         match word {
             Word::i64(n) => n,
-            _ => exit(-1),
+            Word::u64(n) => n as Self,
+            Word::f64(n) => n as Self,
+            Word::ptr(n) => n as *const () as Self,
         }
     }
 }
@@ -88,8 +96,10 @@ impl From<u64> for Word {
 impl From<Word> for u64 {
     fn from(word: Word) -> Self {
         match word {
+            Word::i64(n) => n as Self,
             Word::u64(n) => n,
-            _ => exit(-1),
+            Word::f64(n) => n as Self,
+            Word::ptr(n) => n as *const () as Self,
         }
     }
 }
@@ -103,8 +113,10 @@ impl From<f64> for Word {
 impl From<Word> for f64 {
     fn from(word: Word) -> Self {
         match word {
+            Word::i64(n) => n as Self,
+            Word::u64(n) => n as Self,
             Word::f64(n) => n,
-            _ => exit(-1),
+            Word::ptr(n) => n as *const () as u64 as Self,
         }
     }
 }
@@ -118,8 +130,10 @@ impl From<*mut Word> for Word {
 impl From<Word> for *mut Word {
     fn from(word: Word) -> Self {
         match word {
+            Word::i64(n) => n as Self,
+            Word::u64(n) => n as Self,
+            Word::f64(n) => n as u64 as Self,
             Word::ptr(n) => n,
-            _ => exit(-1),
         }
     }
 }

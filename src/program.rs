@@ -1,6 +1,10 @@
-use std::{collections::HashMap, u16};
+use std::{collections::HashMap, process::exit, str::FromStr, u16};
 
-use crate::{inst::Inst, word::Word, VMError};
+use crate::{
+    dehasm::hasm_with_operand,
+    inst::{Inst, INST_TRANSLATE, OPERAND_REQUIRED},
+    VMError,
+};
 
 pub const LABLE_TABLE_CAPACITY: u16 = u16::MAX;
 pub const DEFERRED_OPERANDS_CAPACITY: u16 = u16::MAX;
@@ -75,51 +79,16 @@ impl Program {
                     return None;
                 }
 
-                let mut interpret_hasm = |inst: Vec<&str>, program_size_t: &mut u16| {
-                    let inst = match inst[0] {
-                        "push" => Ok(Inst::InstPush(inst[1].parse::<u64>().unwrap().into())),
-
-                        "addi" => Ok(Inst::InstAddi),
-                        "subi" => Ok(Inst::InstSubi),
-                        "muli" => Ok(Inst::InstMuli),
-                        "divi" => Ok(Inst::InstDivi),
-
-                        "addf" => Ok(Inst::InstAddf),
-                        "subf" => Ok(Inst::InstSubf),
-                        "mulf" => Ok(Inst::InstMulf),
-                        "divf" => Ok(Inst::InstDivf),
-
-                        "halt" => Ok(Inst::InstHalt),
-                        "jmp" => {
-                            let operand = inst[1];
-                            if operand.chars().next().unwrap().is_numeric() {
-                                Ok(Inst::InstJmp(operand.parse::<u64>().unwrap().into()))
-                            } else {
-                                assert!(
-                                    tc.defered_operands.cache_size + 1 < DEFERRED_OPERANDS_CAPACITY
-                                );
-                                tc.defered_operands
-                                    .hash_map
-                                    .insert(*program_size_t, operand.to_string());
-                                tc.defered_operands.cache_size += 1;
-                                Ok(Inst::InstJmp(Word::u64(0)))
-                            }
-                        }
-                        "eq" => Ok(Inst::InstEq(inst[1].parse::<u64>().unwrap().into())),
-                        "dup" => Ok(Inst::InstDup(inst[1].parse::<u64>().unwrap().into())),
-                        "nop" => Ok(Inst::InstNop),
-                        "#" => Ok(Inst::InstHalt),
-                        _ => Err(VMError::InvalidAsmInst {
-                            inst: inst[0].to_string(),
-                        }),
+                let interpret_hasm =
+                    |inst: Vec<&str>, tc: &mut TranslationContext, program_size_t: &mut u16| {
+                        let inst_str = *INST_TRANSLATE.extract_val(&inst[0]);
+                        let ha_inst: Inst = Inst::from_str(inst_str).unwrap();
+                        let maybe_operand = inst.get(1);
+                        let inst = ha_inst.resolve_operand(maybe_operand, tc, program_size_t);
+                        *program_size_t += 1;
+                        Ok(inst)
                     };
-                    *program_size_t += 1;
-                    inst
-                };
 
-                // loop: dup 2
-                // ["loop:", "dup", "2"]
-                // ["dup:", "2"]
                 if inst.first()?.ends_with(":") {
                     let label = inst.first()?.replace(":", "");
                     assert!(tc.label_table.cache_size + 1 < LABLE_TABLE_CAPACITY);
@@ -128,13 +97,13 @@ impl Program {
 
                     let possible_inst = inst[1..].to_vec();
                     if !possible_inst.is_empty() {
-                        return Some(interpret_hasm(possible_inst, &mut program_size_t));
+                        return Some(interpret_hasm(possible_inst, &mut tc, &mut program_size_t));
                     }
 
                     return None;
                 }
 
-                Some(interpret_hasm(inst, &mut program_size_t))
+                Some(interpret_hasm(inst, &mut tc, &mut program_size_t))
             })
             .collect::<Result<Vec<Inst>, VMError>>()?;
 
@@ -160,24 +129,20 @@ impl Program {
     pub fn to_hasm(&self) -> Vec<String> {
         self.insts
             .iter()
-            .map(|inst| match inst {
-                Inst::InstPush(operand) => format!("push {}", operand),
+            .map(|inst| {
+                let asm_inst = (*INST_TRANSLATE.extract_val(&inst.as_ref())).to_string();
 
-                Inst::InstAddi => "addi".to_string(),
-                Inst::InstSubi => "subi".to_string(),
-                Inst::InstMuli => "muli".to_string(),
-                Inst::InstDivi => "divi".to_string(),
+                if *OPERAND_REQUIRED.get(inst.as_ref()).unwrap_or(&false) {
+                    return match inst {
+                        Inst::InstPush(operand)
+                        | Inst::InstDup(operand)
+                        | Inst::InstEq(operand)
+                        | Inst::InstJmp(operand) => hasm_with_operand(asm_inst, *operand),
+                        _ => exit(-2),
+                    };
+                }
 
-                Inst::InstAddf => "addf".to_string(),
-                Inst::InstSubf => "subf".to_string(),
-                Inst::InstMulf => "mulf".to_string(),
-                Inst::InstDivf => "divf".to_string(),
-
-                Inst::InstHalt => "halt".to_string(),
-                Inst::InstJmp(operand) => format!("jmp {}", operand),
-                Inst::InstEq(operand) => format!("eq {}", operand),
-                Inst::InstDup(operand) => format!("dup {}", operand),
-                Inst::InstNop => "nop".to_string(),
+                asm_inst
             })
             .collect::<Vec<String>>()
     }

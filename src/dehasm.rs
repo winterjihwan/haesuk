@@ -3,7 +3,7 @@ use std::{
     io::{self, Read, Write},
 };
 
-use crate::{program::Program, VMError};
+use crate::{program::Program, word::Word, VMError};
 
 pub fn ha_to_hasm(path: &str) -> io::Result<()> {
     let mut file = File::open(path).map_err(|err| VMError::IoFail {
@@ -28,4 +28,8 @@ pub fn ha_to_hasm(path: &str) -> io::Result<()> {
     }
 
     Ok(())
+}
+
+pub fn hasm_with_operand(hasm: String, operand: Word) -> String {
+    format!("{} {}", hasm, operand)
 }

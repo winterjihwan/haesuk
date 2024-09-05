@@ -157,9 +157,9 @@ impl VM {
                     if self.stack_size <= 2 {
                         return Err(VMError::StackUnderflow { inst: inst.clone() });
                     }
-                    self.stack[self.stack_size - 2] = Word::i64(
-                        i64::from(self.stack[self.stack_size - 2])
-                            + i64::from(self.stack[self.stack_size - 1]),
+                    self.stack[self.stack_size - 2] = Word::f64(
+                        f64::from(self.stack[self.stack_size - 2])
+                            + f64::from(self.stack[self.stack_size - 1]),
                     );
                     self.stack_size -= 1;
                     self.ip += 1;
@@ -169,9 +169,9 @@ impl VM {
                         return Err(VMError::StackUnderflow { inst: inst.clone() });
                     }
 
-                    self.stack[self.stack_size - 2] = Word::i64(
-                        i64::from(self.stack[self.stack_size - 2])
-                            - i64::from(self.stack[self.stack_size - 1]),
+                    self.stack[self.stack_size - 2] = Word::f64(
+                        f64::from(self.stack[self.stack_size - 2])
+                            - f64::from(self.stack[self.stack_size - 1]),
                     );
                     self.stack_size -= 1;
                     self.ip += 1;
@@ -181,9 +181,9 @@ impl VM {
                         return Err(VMError::StackUnderflow { inst: inst.clone() });
                     }
 
-                    self.stack[self.stack_size - 2] = Word::i64(
-                        i64::from(self.stack[self.stack_size - 2])
-                            * i64::from(self.stack[self.stack_size - 1]),
+                    self.stack[self.stack_size - 2] = Word::f64(
+                        f64::from(self.stack[self.stack_size - 2])
+                            * f64::from(self.stack[self.stack_size - 1]),
                     );
                     self.stack_size -= 1;
                     self.ip += 1;
@@ -198,9 +198,9 @@ impl VM {
                         return Err(VMError::DivisionByZero);
                     }
 
-                    self.stack[self.stack_size - 2] = Word::i64(
-                        i64::from(self.stack[self.stack_size - 2])
-                            / i64::from(self.stack[self.stack_size - 1]),
+                    self.stack[self.stack_size - 2] = Word::f64(
+                        f64::from(self.stack[self.stack_size - 2])
+                            / f64::from(self.stack[self.stack_size - 1]),
                     );
                     self.stack_size -= 1;
                     self.ip += 1;
@@ -251,7 +251,15 @@ impl VM {
     pub fn dump(&self) {
         println!("Stack: ");
         (0..self.stack_size).for_each(|n| {
-            println!("\t{}", self.stack[n]);
+            let n = &self.stack[n];
+            let n_u64: u64 = (*n).into();
+            let n_i64: i64 = (*n).into();
+            let n_f64: f64 = (*n).into();
+            let n_ptr: *mut Word = (*n).into();
+            println!(
+                "\tu64: {}, i64: {}, f64: {}, ptr: {:?}",
+                n_u64, n_i64, n_f64, n_ptr
+            );
         })
     }
 }

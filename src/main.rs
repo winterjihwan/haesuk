@@ -1,3 +1,5 @@
+#[allow(dead_code)]
+mod bimap;
 mod dehasm;
 mod errors;
 mod hasm;
