@@ -1,6 +1,6 @@
-use std::{collections::HashMap, hash::Hash, sync::Arc};
+use std::{collections::HashMap, fmt::Debug, hash::Hash, sync::Arc};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Bimap<K, V> {
     forward: HashMap<Arc<K>, Arc<V>>,
     backward: HashMap<Arc<V>, Arc<K>>,

@@ -102,7 +102,7 @@ impl VM {
                     self.ip += 1;
                 }
                 Inst::InstAddi => {
-                    if self.stack_size <= 2 {
+                    if self.stack_size < 2 {
                         return Err(VMError::StackUnderflow { inst: inst.clone() });
                     }
                     self.stack[self.stack_size - 2] = Word::i64(
@@ -113,7 +113,7 @@ impl VM {
                     self.ip += 1;
                 }
                 Inst::InstSubi => {
-                    if self.stack_size <= 2 {
+                    if self.stack_size < 2 {
                         return Err(VMError::StackUnderflow { inst: inst.clone() });
                     }
 
@@ -125,7 +125,7 @@ impl VM {
                     self.ip += 1;
                 }
                 Inst::InstMuli => {
-                    if self.stack_size <= 2 {
+                    if self.stack_size < 2 {
                         return Err(VMError::StackUnderflow { inst: inst.clone() });
                     }
 
@@ -154,7 +154,7 @@ impl VM {
                     self.ip += 1;
                 }
                 Inst::InstAddf => {
-                    if self.stack_size <= 2 {
+                    if self.stack_size < 2 {
                         return Err(VMError::StackUnderflow { inst: inst.clone() });
                     }
                     self.stack[self.stack_size - 2] = Word::f64(
@@ -165,7 +165,7 @@ impl VM {
                     self.ip += 1;
                 }
                 Inst::InstSubf => {
-                    if self.stack_size <= 2 {
+                    if self.stack_size < 2 {
                         return Err(VMError::StackUnderflow { inst: inst.clone() });
                     }
 
@@ -177,7 +177,7 @@ impl VM {
                     self.ip += 1;
                 }
                 Inst::InstMulf => {
-                    if self.stack_size <= 2 {
+                    if self.stack_size < 2 {
                         return Err(VMError::StackUnderflow { inst: inst.clone() });
                     }
 
@@ -240,7 +240,9 @@ impl VM {
                     self.stack_size += 1;
                     self.ip += 1;
                 }
-                Inst::InstNop => {}
+                Inst::InstNop => {
+                    self.ip += 1;
+                }
             }
             loop_count += 1
         }

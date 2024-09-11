@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, process::exit};
 
 use lazy_static::lazy_static;
 use strum_macros::{AsRefStr, Display, EnumString};
@@ -69,7 +69,15 @@ impl Inst {
     }
     pub fn ser_opcode(&self) -> u8 {
         match self {
-            Inst::InstPush(_) => 0x01,
+            Inst::InstPush(word) => match word {
+                Word::i64(_) => 0xF1,
+                Word::u64(_) => 0xF2,
+                Word::f64(_) => 0xF3,
+                _ => {
+                    println!("Unsupported word type for inst push, word: {}", word);
+                    exit(15)
+                }
+            },
 
             Inst::InstAddi => 0x02,
             Inst::InstSubi => 0x03,
@@ -91,7 +99,9 @@ impl Inst {
 
     pub fn deser_opcode(opcode: u8) -> Option<Self> {
         match opcode {
-            0x01 => Some(Inst::InstPush(Word::u64(0))),
+            0xF1 => Some(Inst::InstPush(Word::i64(0))),
+            0xF2 => Some(Inst::InstPush(Word::u64(0))),
+            0xF3 => Some(Inst::InstPush(Word::f64(0.0))),
 
             0x02 => Some(Inst::InstAddi),
             0x03 => Some(Inst::InstSubi),
@@ -149,27 +159,40 @@ impl Inst {
 
     pub fn with_operand_word(
         self,
-        maybe_operand_str: Option<&&str>,
+        maybe_operand_str: Option<&str>,
         tc: &mut TranslationContext,
         program_size_t: &mut u16,
     ) -> Self {
         let operand_str = maybe_operand_str.unwrap();
 
         match self {
-            Inst::InstPush(_) => Inst::InstPush(Word::i64(operand_str.parse::<i64>().unwrap())),
-            Inst::InstJmp(_) => {
-                if (operand_str).chars().next().unwrap().is_numeric() {
-                    Inst::InstJmp((operand_str).parse::<u64>().unwrap().into())
+            Inst::InstPush(_) => {
+                let operand_word = if operand_str.contains(".") {
+                    println!("Trying to parse operand str, {}", operand_str);
+                    Word::f64(operand_str.parse::<f64>().unwrap())
                 } else {
-                    assert!(tc.defered_operands.cache_size + 1 < DEFERRED_OPERANDS_CAPACITY);
-                    tc.defered_operands
-                        .hash_map
-                        .insert(*program_size_t, (operand_str).to_string());
-                    tc.defered_operands.cache_size += 1;
-                    Inst::InstJmp(Word::u64(0))
+                    operand_str
+                        .parse::<i64>()
+                        .map(|n| Word::i64(n))
+                        .or_else(|_| operand_str.parse::<u64>().map(|n| Word::u64(n)))
+                        .unwrap()
                 };
 
-                Inst::InstJmp(Word::i64(operand_str.parse::<i64>().unwrap()))
+                println!("parsed operand {:#?}", operand_word);
+
+                Inst::InstPush(operand_word)
+            }
+            Inst::InstJmp(_) => {
+                if (operand_str).chars().next().unwrap().is_numeric() {
+                    return Inst::InstJmp((operand_str).parse::<u64>().unwrap().into());
+                } else {
+                    assert!(tc.deferred_operands.cache_size + 1 < DEFERRED_OPERANDS_CAPACITY);
+                    tc.deferred_operands
+                        .hash_map
+                        .insert(*program_size_t, (operand_str).to_string());
+                    tc.deferred_operands.cache_size += 1;
+                    return Inst::InstJmp(Word::u64(0));
+                };
             }
             Inst::InstEq(_) => Inst::InstEq(Word::u64(operand_str.parse::<u64>().unwrap())),
             Inst::InstDup(_) => Inst::InstDup(Word::u64(operand_str.parse::<u64>().unwrap())),
@@ -179,7 +202,16 @@ impl Inst {
 
     pub fn with_operand_bytes(self, op_bytes: &mut [u8; 8]) -> Self {
         match self {
-            Inst::InstPush(_) => Inst::InstPush(Word::from_le_bytes::<i64>(*op_bytes)),
+            Inst::InstPush(word) => {
+                let word = match word {
+                    Word::i64(_) => Word::from_le_bytes::<i64>(*op_bytes),
+                    Word::u64(_) => Word::from_le_bytes::<u64>(*op_bytes),
+                    Word::f64(_) => Word::from_le_bytes::<f64>(*op_bytes),
+                    _ => exit(15),
+                };
+
+                Inst::InstPush(word)
+            }
             Inst::InstJmp(_) => Inst::InstJmp(Word::from_le_bytes::<u64>(*op_bytes)),
             Inst::InstEq(_) => Inst::InstEq(Word::from_le_bytes::<u64>(*op_bytes)),
             Inst::InstDup(_) => Inst::InstDup(Word::from_le_bytes::<u64>(*op_bytes)),
@@ -189,7 +221,7 @@ impl Inst {
 
     pub fn resolve_operand(
         self,
-        maybe_operand_str: Option<&&str>,
+        maybe_operand_str: Option<&str>,
         tc: &mut TranslationContext,
         program_size_t: &mut u16,
     ) -> Self {

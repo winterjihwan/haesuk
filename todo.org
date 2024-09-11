@@ -1,0 +1,14 @@
+* DONE Sync the INST_PUSH = "push", using a common dictionary used by hasm and dehasm
+  DEADLINE: <2024-09-05 Thu> CLOSED: [2024-09-06 Fri 01:52]
+* DONE Replace redundant vm errors, for instance requiring a certain stack length
+  DEADLINE: <2024-09-06 Fri> CLOSED: [2024-09-07 Sat 16:33]
+* TODO Floats should not render in u64 / i64 types
+* DONE General refactoring
+  DEADLINE: <2024-09-06 Fri> CLOSED: [2024-09-06 Fri 01:54]
+* DONE Float addition
+  CLOSED: [2024-09-07 Sat 16:33]
+    try something like
+    push 1.0
+    push 2.0
+    addf
+    halt

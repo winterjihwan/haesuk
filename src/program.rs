@@ -1,4 +1,4 @@
-use std::{collections::HashMap, process::exit, str::FromStr, u16};
+use std::{collections::HashMap, ops::Deref, process::exit, str::FromStr, u16};
 
 use crate::{
     dehasm::hasm_with_operand,
@@ -23,7 +23,7 @@ pub struct HMCache<K, V> {
 #[derive(Default, Debug)]
 pub struct TranslationContext {
     pub label_table: HMCache<String, u16>,
-    pub defered_operands: HMCache<u16, String>,
+    pub deferred_operands: HMCache<u16, String>,
 }
 
 impl Program {
@@ -75,16 +75,13 @@ impl Program {
                     .filter(|s| !s.is_empty())
                     .collect();
 
-                if inst.is_empty() {
-                    return None;
-                }
-
                 let interpret_hasm =
                     |inst: Vec<&str>, tc: &mut TranslationContext, program_size_t: &mut u16| {
-                        let inst_str = *INST_TRANSLATE.extract_val(&inst[0]);
-                        let ha_inst: Inst = Inst::from_str(inst_str).unwrap();
-                        let maybe_operand = inst.get(1);
-                        let inst = ha_inst.resolve_operand(maybe_operand, tc, program_size_t);
+                        //
+                        let inst_str = *INST_TRANSLATE.extract_key(&inst[0]);
+                        let maybe_operand = inst.get(1).map(Deref::deref);
+                        let inst: Inst = Inst::from_str(inst_str).unwrap();
+                        let inst = inst.resolve_operand(maybe_operand, tc, program_size_t);
                         *program_size_t += 1;
                         Ok(inst)
                     };
@@ -107,7 +104,7 @@ impl Program {
             })
             .collect::<Result<Vec<Inst>, VMError>>()?;
 
-        tc.defered_operands
+        tc.deferred_operands
             .hash_map
             .into_iter()
             .try_for_each(|(inst_index, label)| {
@@ -138,7 +135,7 @@ impl Program {
                         | Inst::InstDup(operand)
                         | Inst::InstEq(operand)
                         | Inst::InstJmp(operand) => hasm_with_operand(asm_inst, *operand),
-                        _ => exit(-2),
+                        _ => exit(2),
                     };
                 }
 
